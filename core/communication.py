@@ -3,7 +3,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 
 class Communication:
-    def __init__(self, model_name="stabilityai/stablelm-tuned-alpha-7b"):
+    def __init__(self, model_name="stabilityai/stablelm-tuned-alpha-3b"):
         # Charger tokenizer et modèle
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForCausalLM.from_pretrained(model_name)
