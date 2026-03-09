@@ -1,17 +1,37 @@
+# core/logger.py
 import datetime
 
 class Logger:
-    def __init__(self, filename="astra_log.txt"):
-        self.filename = filename
+    """
+    Logger simple pour Astra.
+    Enregistre les décisions et réponses dans un fichier ou affichage console.
+    """
 
-    def log(self, message, level="INFO"):
+    def __init__(self, log_file="data/brain.log", console=True):
+        self.log_file = log_file
+        self.console = console
+
+        # Crée le fichier si inexistant
+        try:
+            with open(self.log_file, "a", encoding="utf-8") as f:
+                f.write(f"\n--- Nouvelle session : {datetime.datetime.now()} ---\n")
+        except Exception as e:
+            print(f"Erreur création log: {e}")
+
+    def log_decision(self, user_input, response, action_type):
+        """
+        Log une action ou une décision d'Astra.
+        """
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        formatted_message = f"[{timestamp}] [{level}] {message}\n"
-        with open(self.filename, "a", encoding="utf-8") as file:
-            file.write(formatted_message)
+        log_entry = f"[{timestamp}] Action: {action_type} | Input: {user_input} | Response: {response}\n"
 
-    def log_user_message(self, message):
-        self.log(f"USER: {message}", level="USER")
+        # Écriture dans le fichier
+        try:
+            with open(self.log_file, "a", encoding="utf-8") as f:
+                f.write(log_entry)
+        except Exception as e:
+            print(f"Erreur écriture log: {e}")
 
-    def log_ai_response(self, response):
-        self.log(f"ASTRA: {response}", level="AI")
+        # Affichage console si activé
+        if self.console:
+            print(log_entry.strip())
