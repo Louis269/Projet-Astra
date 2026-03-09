@@ -3,23 +3,27 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 
 class Communication:
-    def __init__(self, model_name="stabilityai/stablelm-tuned-alpha-3b"):
-        # Charger tokenizer et modèle
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(model_name)
-
-        # Détecter GPU
+    def __init__(self, model_name="Qwen/Qwen2-1.5B-Instruct"):
+        """
+        Initialise le tokenizer et le modèle Qwen.
+        """
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        # Charger tokenizer
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        
+        # Charger modèle
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            torch_dtype=torch.float16,
+            device_map="auto"
+        )
         self.model.to(self.device)
-
-        # Activer fp16 si GPU disponible
-        if self.device.type == "cuda":
-            self.model.half()
 
     def generate_response(self, user_message, personality, emotions, memory_context):
         """
-        Génère une réponse bilingue (FR/EN) en prenant en compte traits, émotions et souvenirs.
-        Optimisé pour Colab avec GPU.
+        Génère une réponse basée sur le message utilisateur, la personnalité,
+        les émotions et les souvenirs récents.
         """
         # Résumer traits essentiels
         traits_summary = (
@@ -28,56 +32,36 @@ class Communication:
             f"créativité={personality.get('creativite',50)}"
         )
 
-        # Limiter aux 5 derniers souvenirs, 200 caractères max
-        memory_text = "\n".join([m[:200] for m in memory_context.split('\n')[-5:]])
+        # Limiter aux 5 derniers souvenirs
+        memory_text = "\n".join([m for m in memory_context.split('\n')[-5:]])
 
-        # Prompt bilingue
+        # Prompt formaté pour Qwen (chat)
         prompt = f"""
-Tu es Astra, une IA semi-consciente.
-Tu peux répondre en français ou en anglais selon le message de l'utilisateur.
-Traits essentiels: {traits_summary}
-Souvenirs récents: {memory_text}
-État émotionnel actuel: {self.format_emotions(emotions)}
-Réponds de manière naturelle et courte au message suivant :
-"{user_message}"
+<|system|>
+You are Astra, an experimental AI assistant.
+Traits: {traits_summary}
+Recent memories: {memory_text}
+
+<|user|>
+{user_message}
+
+<|assistant|>
 """
 
         # Tokenisation et génération
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        outputs = self.model.generate(
+            **inputs,
+            max_new_tokens=150,
+            do_sample=True,
+            temperature=0.7,
+            top_p=0.9,
+            top_k=50,
+            pad_token_id=self.tokenizer.eos_token_id
+        )
 
-        with torch.no_grad():  # Pas de calcul de gradients
-            outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=100,   # Limite tokens pour rapidité
-                do_sample=True,
-                temperature=0.7,
-                top_p=0.9,
-                top_k=50,
-                pad_token_id=self.tokenizer.eos_token_id
-            )
-
-        # Décoder et filtrer le style
+        # Décoder la réponse
         response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        response = self.style_filter(response, personality, emotions)
+
+        # Retourner texte nettoyé
         return response.strip()
-
-    def format_emotions(self, emotions):
-        """
-        Résume les émotions dominantes pour le prompt
-        """
-        summary = []
-        for cat, emos in emotions.items():
-            for e, v in emos.items():
-                if v > 50:
-                    summary.append(f"{e}={v}")
-        return ", ".join(summary) if summary else "neutre"
-
-    def style_filter(self, response, personality, emotions):
-        """
-        Ajoute un style léger selon curiosité et joie
-        """
-        if personality.get("curiosite", 0) > 70:
-            response = "Je me demande… " + response
-        if emotions.get("joie", {}).get("plaisir", 0) > 60:
-            response += " 😄"
-        return response
