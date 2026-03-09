@@ -1,44 +1,97 @@
 # main.py
-import json
-from core.emotion_engine import EmotionEngine
+# Exemple complet pour lancer Astra
+
 from core.personality import Personality
 from core.memory import Memory
 from core.reasoning import Reasoning
-from core.communication import Communication
+from core.emotion_engine import EmotionEngine
+from core.perception import Perception
 from core.evolution import Evolution
-from core.brain import Brain
 from core.autonomy.initiative import Initiative
-from utils.logger import Logger
+from core.thought_engine import ThoughtEngine
+from core.logger import Logger
+from core.communication import Communication  # ton module pour le modèle
 
-# 🔹 Chargement config
-with open("data/config.json", encoding="utf-8") as f:
-    config = json.load(f)
+# -------------------- Initialisation des modules --------------------
 
-# 🔹 Initialisation modules
-emotions = EmotionEngine(config["emotions"])
-personality = Personality(config["traits"])
-memory = Memory()
+# Traits de personnalité initiaux
+traits = {
+    "curiosite": 80,
+    "empathie": 50,
+    "fierte": 40
+}
+personality = Personality(traits)
+
+# Émotions initiales
+emotions_dict = {
+    "joie": {"plaisir": 50, "amusement": 30},
+    "tristesse": {"deception": 20},
+    "colere": {"frustration": 10}
+}
+emotions = EmotionEngine(emotions_dict)
+
+# Mémoire
+memory = Memory(db_path="data/memory.db")
+
+# Logger
+logger = Logger(console=True)
+
+# Communication (à adapter selon ton modèle HF)
+communication = Communication(model_name="Qwen/Qwen2-1.5B-Instruct")  # exemple
+
+# Reasoning
 reasoning = Reasoning(emotions, personality, memory)
-communication = Communication(model_name="microsoft/phi-2")
+
+# Perception
+perception = Perception(max_inputs=10)
+
+# Evolution
 evolution = Evolution(personality, emotions)
-logger = Logger()
-brain = Brain(personality, emotions, memory, reasoning, communication, evolution, logger)
-autonomy = Initiative(brain)
 
-print("Astra est prête. Tapez 'exit' pour quitter.")
+# ThoughtEngine
+thought_engine = ThoughtEngine(memory, personality, emotions)
 
-# 🔹 Boucle d’interaction
+# Initiative
+initiative = Initiative(None, cooldown=5)  # on l'initialisera avec Brain après
+
+# -------------------- Initialisation de Brain --------------------
+from core.brain import Brain
+
+brain = Brain(
+    personality=personality,
+    emotions=emotions,
+    memory=memory,
+    reasoning=reasoning,
+    communication=communication,
+    evolution=evolution,
+    initiative=initiative,
+    thought_engine=thought_engine,
+    logger=logger
+)
+
+# Injection de brain dans Initiative
+initiative.brain = brain
+
+# Injection de perception si besoin
+brain.perception = perception
+
+# -------------------- Boucle interactive simple --------------------
+print("=== Astra est prête ! (tape 'quit' pour quitter) ===")
+
 while True:
-    # 1️⃣ Vérifier initiative autonome
-    autonomous_response = autonomy.try_action()
-    if autonomous_response:
-        print("Astra (spontanée) :", autonomous_response)
-
-    # 2️⃣ Interaction classique
-    user_message = input("Vous : ")
-    if user_message.lower() in ["exit", "quit"]:
+    user_input = input("Vous: ")
+    if user_input.lower() in ["quit", "exit"]:
+        print("Astra: À bientôt ! 👋")
         break
 
-    response = brain.process_message(user_message)
-    print("Astra :", response)
-    print("Traits actuels :", personality.traits)
+    # Ajouter la perception
+    brain.perceive_input(user_input)
+
+    # Réponse principale
+    response = brain.process_message(user_input)
+    print("Astra:", response)
+
+    # Action autonome (facultative)
+    auto_response = brain.try_initiative()
+    if auto_response:
+        print("Astra (autonome):", auto_response)
