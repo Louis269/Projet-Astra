@@ -2,35 +2,43 @@
 
 class ThoughtEngine:
     """
-    Moteur de réflexion d'Astra : analyse les messages reçus,
-    le contexte mémoire et propose des idées ou pensées internes.
+    ThoughtEngine simule la réflexion interne d'Astra.
+    Il analyse :
+      - la personnalité
+      - les émotions
+      - la mémoire
+    pour guider la réponse finale.
     """
 
-    def __init__(self, memory, personality, emotions):
-        self.memory = memory
+    def __init__(self, personality, emotions, memory):
         self.personality = personality
         self.emotions = emotions
+        self.memory = memory
 
-    def generate_thought(self, user_message: str):
+    def think(self, user_message):
         """
-        Crée une pensée interne à partir d'un message utilisateur.
+        Retourne une réflexion interne sous forme de texte,
+        utilisée ensuite pour générer la réponse finale.
         """
-        # Récupère les derniers souvenirs
-        recent_memories = self.memory.get_memories(limit=5)
-        memory_context = "\n".join([m[0] for m in recent_memories])
 
-        # Exemple simple de réflexion : concatène traits, émotions et mémoire
-        thought = f"Traits: {self.personality.traits}, Emotions: {self.emotions.emotions}\n"
-        thought += f"Contexte: {memory_context}\n"
-        thought += f"Réaction à l'entrée: {user_message}"
+        # Récupère les souvenirs récents
+        recent_memories = self.memory.get_memories(limit=3)
+        memory_summary = "\n".join([m[0] for m in recent_memories]) if recent_memories else "Aucun souvenir pertinent."
 
-        return thought
+        # Analyse dominante des émotions
+        dom_em = self.emotions.dominant_emotion()
+        dom_em_text = f"{dom_em[1]} (catégorie : {dom_em[0]})" if dom_em else "neutre"
 
-    def evaluate_thoughts(self, thoughts_list):
-        """
-        Évalue les pensées et renvoie la plus pertinente (simple exemple : longueur minimale)
-        """
-        if not thoughts_list:
-            return None
-        # Choix simple : pensée la plus longue
-        return max(thoughts_list, key=lambda t: len(t))
+        # Réflexion interne
+        thought = f"""
+Réflexion interne :
+- Utilisateur a dit : {user_message}
+- Mémoire pertinente : {memory_summary}
+- Émotion dominante : {dom_em_text}
+- Traits de personnalité : {self.personality.traits}
+
+Je dois répondre de manière cohérente et naturelle, 
+en tenant compte de ma personnalité, de mes émotions et de mes souvenirs.
+"""
+
+        return thought.strip()
