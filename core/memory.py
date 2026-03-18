@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import os
+from datetime import datetime
 
 
 class Memory:
@@ -21,7 +22,8 @@ class Memory:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             type TEXT,
             contenu TEXT,
-            emotions TEXT
+            emotions TEXT,
+            timestamp TEXT
         )
         """)
 
@@ -31,9 +33,11 @@ class Memory:
 
         emotions_json = json.dumps(emotions)
 
+        timestamp = datetime.now().isoformat()
+
         self.cursor.execute(
-            "INSERT INTO souvenirs (type, contenu, emotions) VALUES (?, ?, ?)",
-            (type_, contenu, emotions_json)
+            "INSERT INTO souvenirs (type, contenu, emotions, timestamp) VALUES (?, ?, ?, ?)",
+            (type_, contenu, emotions_json, timestamp)
         )
 
         self.conn.commit()
@@ -50,6 +54,7 @@ class Memory:
         memories = []
 
         for contenu, emotions_json in rows:
+
             try:
                 emotions = json.loads(emotions_json)
             except:
@@ -58,6 +63,30 @@ class Memory:
             memories.append((contenu, emotions))
 
         return memories
+
+    def get_memory_context(self, limit=5):
+        """
+        Génère un contexte mémoire propre pour le modèle.
+        """
+
+        memories = self.get_memories(limit)
+
+        if not memories:
+            return ""
+
+        context_lines = []
+
+        for contenu, emotions in memories:
+
+            text = contenu.strip()
+
+            # limiter la taille
+            if len(text) > 120:
+                text = text[:120] + "..."
+
+            context_lines.append(f"- {text}")
+
+        return "\n".join(context_lines)
 
     def close(self):
         self.conn.close()

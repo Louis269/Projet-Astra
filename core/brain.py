@@ -27,6 +27,18 @@ class Brain:
         self.initiative = Initiative(self)
         self.logger = Logger()
 
+    def choose_style(self, user_message):
+        """
+        Retourne un style de réponse selon le message utilisateur.
+        Pour l’instant, on fait simple : neutre, amical, ou humoristique.
+        """
+        # Exemple simple basé sur ponctuation et mots
+        if "?" in user_message:
+            return "Répond de manière amicale et curieuse :"
+        if "!" in user_message:
+            return "Répond de manière enthousiaste :"
+        return "Répond de manière naturelle :"
+
     def _shorten_memory(self, text, max_chars=500):
         """Retourne une version condensée d'un texte de mémoire pour le prompt"""
         return text[-max_chars:] if len(text) > max_chars else text
@@ -67,7 +79,8 @@ class Brain:
         )
 
         # 5️⃣ Ajouter la réponse à la mémoire
-        self.memory.add_memory("conversation", response, self.emotions.emotions)
+        self.memory.add_memory("conversation", f"Utilisateur: {user_message}", self.emotions.emotions)
+        self.memory.add_memory("conversation", f"Astra: {response}", self.emotions.emotions)
 
         # 6️⃣ Log de la décision
         self.logger.log_decision("réponse", response, "user_input")

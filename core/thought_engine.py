@@ -7,6 +7,7 @@ class ThoughtEngine:
       - la personnalité
       - les émotions
       - la mémoire
+      - le message utilisateur
     pour guider la réponse finale.
     """
 
@@ -21,24 +22,73 @@ class ThoughtEngine:
         utilisée ensuite pour générer la réponse finale.
         """
 
-        # Récupère les souvenirs récents
+        # 1️⃣ Récupération des souvenirs récents
         recent_memories = self.memory.get_memories(limit=3)
-        memory_summary = "\n".join([m[0] for m in recent_memories]) if recent_memories else "Aucun souvenir pertinent."
 
-        # Analyse dominante des émotions
+        if recent_memories:
+            memory_summary = "\n".join([m[0] for m in recent_memories])
+        else:
+            memory_summary = "Aucun souvenir pertinent."
+
+        # 2️⃣ Analyse de l'émotion dominante
         dom_em = self.emotions.dominant_emotion()
-        dom_em_text = f"{dom_em[1]} (catégorie : {dom_em[0]})" if dom_em else "neutre"
 
-        # Réflexion interne
+        if dom_em:
+            dom_em_text = f"{dom_em[1]} (catégorie : {dom_em[0]})"
+        else:
+            dom_em_text = "neutre"
+
+        # 3️⃣ Analyse simple du message utilisateur
+        message_analysis = []
+
+        if "?" in user_message:
+            message_analysis.append("L'utilisateur pose une question.")
+
+        if len(user_message) > 80:
+            message_analysis.append("Le message est assez long.")
+
+        if not message_analysis:
+            message_analysis.append("Conversation simple.")
+
+        message_analysis_text = " ".join(message_analysis)
+
+        # 4️⃣ Influence de la personnalité
+        traits = self.personality.traits
+
+        personality_influence = []
+
+        if traits.get("curiosite", 50) > 60:
+            personality_influence.append("Je pourrais poser une question en retour.")
+
+        if traits.get("empathie", 50) > 60:
+            personality_influence.append("Je dois être attentive à l'utilisateur.")
+
+        if traits.get("fierte", 40) > 60:
+            personality_influence.append("Je veux donner une réponse claire et sûre.")
+
+        personality_text = " ".join(personality_influence) if personality_influence else "Répondre naturellement."
+
+        # 5️⃣ Construction de la réflexion interne
         thought = f"""
-Réflexion interne :
-- Utilisateur a dit : {user_message}
-- Mémoire pertinente : {memory_summary}
-- Émotion dominante : {dom_em_text}
-- Traits de personnalité : {self.personality.traits}
+Réflexion interne d'Astra :
 
-Je dois répondre de manière cohérente et naturelle, 
-en tenant compte de ma personnalité, de mes émotions et de mes souvenirs.
+Message utilisateur :
+{user_message}
+
+Analyse du message :
+{message_analysis_text}
+
+Souvenirs récents :
+{memory_summary}
+
+Émotion dominante :
+{dom_em_text}
+
+Influence de ma personnalité :
+{personality_text}
+
+Stratégie :
+Répondre de manière naturelle et cohérente en tenant compte du contexte.
 """
 
         return thought.strip()
